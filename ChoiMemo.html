@@ -1,0 +1,229 @@
+<!DOCTYPE html
+	PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	 <script src="./eval-calculation-1.0.0.js"></script> 
+	<!-- 
+		eval-calculation-1.0.0.js
+		https://gist.github.com/think49/54b074cab2145efddb48765652c74710 
+	-->
+	<title>ちょいメモ</title>
+	<style type="text/css">
+		@media screen {
+
+			/* .screenOnly {
+				display: block;
+			} */
+
+			.print_only {
+				display: none;
+			}
+
+			.editor {
+				font-size: 200%;
+				width: 800px;
+				height: 800px;
+				overflow: auto;
+				border: 1px #676767 solid;
+				line-height: 1.3;
+				text-align: justify;
+				margin-left: 20px;
+				margin-bottom: 2em;
+				padding: 20px;
+			}
+
+			textarea,
+			input[type="text"] {
+				font-size: 200%;
+				width: 800px;
+				height: 800px;
+				border: 1px #676767 solid;
+				line-height: 1.3;
+				text-align: justify;
+				margin-left: 20px;
+				margin-bottom: 2em;
+			}
+
+			#calculate_text {
+				height: 100px;
+			}
+		}
+
+		.code {
+			font-family: "Courier New", Consolas, monospace;
+			padding: 10px 15px;
+			box-sizing: border-box;
+			display: block;
+			background: #1f1f1f;
+			color: #fafafa;
+			overflow: auto;
+			white-space: pre;
+			line-height: 1.3;
+			font-size: 1.5rem
+		}
+
+		br {
+			line-height: 1.5;
+		}
+
+		p {
+			margin-left: 20px;
+		}
+
+		button {
+			margin-left: 20px;
+		}
+
+		@media print {
+			#inputlength {
+				display: none;
+			}
+
+			@page {
+				margin: 25mm 25mm 25mm 25mm;
+			}
+
+			#print_div {
+				font-size: 10pt;
+				height: auto;
+				/*
+				width: 80%;
+ 				margin-left: 10%;
+				margin-top: 10%;
+ */
+				line-height: 1.3;
+				border: none;
+				text-align: justify;
+			}
+
+			textarea {
+				font-size: 10pt;
+				width: 80%;
+				/* height: 800px; */
+				margin-left: 10%;
+				margin-top: 50pt;
+				line-height: 1.3;
+				border: none;
+				text-align: justify;
+			}
+
+			.screenOnly {
+				display: none;
+			}
+
+			.code {
+				display: none;
+			}
+		}
+	</style>
+</head>
+
+<body>
+	<div contenteditable="false" id="print_div" class="print_only">
+	</div>
+
+	<div>
+		<p class="screenOnly">
+			<span id="inputlength">0</span>文字（改行込み）<br>
+			<span id="word_count">0</span>ワード<br>
+			文章内の数値の単純合計（平均）：<span id="calc_sum">0</span>(<span id="calc_sum_ava">0</span>)<br>
+			文章内の数値の個数：<span id="calc_howmany">0</span><br>
+			文章内の"＊"をかけ算記号とした合計値（平均）：<span id="calc_multi_sum">0</span> (<span id="calc_multi_sum_ava">0</span>)
+		</p>
+		<p>
+			<button onclick="removeCRLF()" class="screenOnly">remove CR/LF</button>
+			<button onclick="copy()" class="screenOnly">Copy</button>
+		</p>
+
+		<textarea id="reading_text" class="screenOnly" onkeyup="processText(value);"></textarea>
+
+		<p class="screenOnly">　下に入力した式を計算した結果：<span id="calculate_result">0</span> </p>
+		<input type="text" id="calculate_text" class="screenOnly" onchange="calculate(value);"><br>
+
+		<p class="screenOnly">コードが見やすいエリア</p>
+		<textarea id="coding_text" onkeyup="processText(value);" class="code screenOnly"></textarea>
+	</div>
+
+
+	<script type="text/javascript">
+
+		window.onload = function () {
+			window.addEventListener("beforeprint", function (event) {
+				let textarea = document.getElementById('reading_text');
+				let print_div = document.getElementById('print_div');
+				print_div.innerText = textarea.value;
+
+			});
+
+			window.addEventListener("afterprint", function (event) {
+				document.getElementById('print_div').innerText = '';
+			});
+		}
+		function calculate(text) {
+			const result = evalCalculation(text);
+			document.getElementById("calculate_result").innerText = result;
+		}
+
+		function processText(str) {
+			//文字数
+			document.getElementById("inputlength").innerText = str.length;
+
+			//ワードカウント
+			document.getElementById("word_count").innerText = str.replace(/\s/g,' ').split(' ').filter(v => v).length;
+
+			//文章内の数字の合計計算（かけ算付き）
+			const tempNumArr = str.replace(/\s*\*\s*/g, '*').replace(/[^0-9\.\*]/g, ' ').split(' ').filter(v => v);
+			const numArr2 = tempNumArr.map((arr) => {
+				arrayForMultiply = arr.split('*');
+				if (arrayForMultiply.length > 1) {
+					let result = 1;
+					for (let i = 0; i < arrayForMultiply.length; i++) {
+						if (arrayForMultiply[i] !== '') { result = result * Number(arrayForMultiply[i]) };
+					}
+					return result;
+				} else {
+					return arr;
+				}
+			});
+
+			if (numArr2.length > 0) {
+				const calc_temp = numArr2.reduce(function (a, x) { return Number(a) + Number(x); });
+				document.getElementById("calc_multi_sum").innerText = calc_temp;
+				document.getElementById("calc_multi_sum_ava").innerText = Math.round(calc_temp / numArr2.length * 100) / 100;
+			} else {
+				document.getElementById("calc_multi_sum").innerText = '0';
+				document.getElementById("calc_multi_sum_ava").innerText = '0';
+			}
+
+			//文章内の数値の単純合計
+			const numArr1 = tempNumArr.map((val) => { return val.split('*') }).flat().filter(v => v);
+			if (numArr1.length > 0) {
+				const calc_temp = numArr1.reduce(function (a, x) { return Number(a) + Number(x); });
+				document.getElementById("calc_sum").innerText = calc_temp;
+				document.getElementById("calc_sum_ava").innerText = Math.round(calc_temp / numArr1.length * 100) / 100;
+				document.getElementById("calc_howmany").innerText = numArr1.length;
+			} else {
+				document.getElementById("calc_sum").innerText = '0';
+				document.getElementById("calc_sum_ava").innerText = '0';
+				document.getElementById("calc_howmany").innerText = '0';
+			}
+		}
+
+		function removeCRLF() {
+			let textarea = document.getElementById('reading_text');
+			//textarea.value = textarea.value.replace(/\r?\n/g, '');
+			textarea.value = textarea.value.replace(/([^\r\n]+)(\r|\r\n|\n)/g, '$1').replace(/((\r|\r\n|\n)+)/g, '$1\n');
+		}
+
+		function copy() {
+			let textarea = document.getElementById('reading_text');
+			textarea.select();
+			document.execCommand("copy");
+		}
+
+	</script>
+</body>
+
+</html>
